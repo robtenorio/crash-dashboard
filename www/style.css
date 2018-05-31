@@ -1,0 +1,26 @@
+.content {
+  background: #707070
+}
+
+#hours_twitter {
+  height:auto;
+  -webkit-column-count: 1;
+  -moz-column-count: 1;
+  -ms-column-count: 1;
+  column-count: 1;
+}
+
+.control-label {
+  font-size:1.45em;
+  color: #999999;
+}
+
+div.checkbox {margin-top: 0;}
+
+.checkbox label, .radio label {
+  font-size: 1.45em;
+}
+
+.marker-cluster-small {
+	background-color: rgba(1, 2, 3, 0.6);
+	}

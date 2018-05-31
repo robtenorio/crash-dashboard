@@ -1,0 +1,12 @@
+name: crash-dashboard
+title: crash-dashboard
+username:
+account: robtenorio
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 346494
+bundleId: 1390326
+url: https://robtenorio.shinyapps.io/crash-dashboard/
+when: 1527133714.77461
+asMultiple: FALSE
+asStatic: FALSE

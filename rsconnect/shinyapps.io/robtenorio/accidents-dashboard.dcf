@@ -1,0 +1,12 @@
+name: accidents-dashboard
+title: accidents-dashboard
+username:
+account: robtenorio
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 343021
+bundleId: 1389837
+url: https://robtenorio.shinyapps.io/accidents-dashboard/
+when: 1527109537.53893
+asMultiple: FALSE
+asStatic: FALSE
