@@ -2,12 +2,9 @@ library(dplyr)
 library(leaflet)
 library(leaflet.extras)
 library(lubridate)
-library(plotly)
 library(purrr)
 library(shiny)
 library(shinydashboard)
-
-binded_data <- readRDS("data/binded_data.rds")
 
 # Define UI for application that draws dashboard
 header <- dashboardHeader(disable = TRUE)
@@ -93,21 +90,7 @@ body <- dashboardBody(
                   leafletOutput("map_govt", height = 700)
               )
             )
-          ),
-    tabItem(tabName = "plots",
-            fluidRow(
-              box(width = 12, height = 300, title = "Daily Crashes by Data Source",
-                  plotlyOutput("lines", height = 250)
-                  )
-              ),
-            fluidRow(
-              box(width = 4, selectInput("lines_input", "Select Data Source", 
-                              choices = c("Twitter" = "twitter", 
-                                          "Govt-Matatu" = "matatu",
-                                          "Govt-Fatalities" = "fatalities"),
-                              selected = "twitter", multiple = TRUE))
-            )
-            )
+          )
     )
 )
 
@@ -119,6 +102,15 @@ ui <- dashboardPage(
 
 # Define server logic
 server <- function(input, output) {
+  
+  binded_data <- readRDS("data/binded_data.rds")
+  
+  twitter_data <- reactiveFileReader(
+    session = NULL,
+    intervalMillis = 100,
+    filePath = 'data/twitter_data.rds',
+    readFunc = readRDS
+  )
 
   observe({
     print(input$tabs)
@@ -153,10 +145,9 @@ server <- function(input, output) {
   
   observe ({
     if(input$tabs == "twitter") {
-      filtered_data <- binded_data %>%
+      filtered_data <- twitter_data() %>%
         filter(time_day %in% input$hours_twitter) %>%
-        filter(year %in% input$years_twitter) %>%
-        filter(source == "twitter")
+        filter(year %in% input$years_twitter)
       
       leafletProxy("map_twitter") %>% 
         clearGroup("markers") %>%
@@ -186,25 +177,6 @@ server <- function(input, output) {
                          clusterOptions = markerClusterOptions(), group = "markers")
     }
     
-  })
-  
-  output$lines <- renderPlotly({
-    all_ts <- readRDS("data/data_ts.rds")
-    
-    plot_ly(data = all_ts, x = ~date, mode = "lines") %>%
-      add_trace(y = ~twitter, mode = "lines") %>%
-      layout(
-        yaxis = list(title = "Number of Crashes"),
-        xaxis = list(title = ""),
-        margin = list(b = 100)
-      )
-  })
-  
-  observe({
-    if("matatu" %in% input$lines_input) {
-      plotlyProxy("lines") %>%
-        add_trace(y = ~matatu, mode = "lines")
-    }
   })
   
 }
