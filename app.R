@@ -26,6 +26,10 @@ sidebar <- dashboardSidebar(collapsed = FALSE,
                                                                     "2017" = 2017,
                                                                     "2018" = 2018),
                                                                   selected = "2018"),
+                                               checkboxInput("today_twitter", label = "Crashes Today",
+                                                             FALSE
+                                                             ),
+                                               uiOutput("nairobiTime"),
                                                checkboxGroupInput("hours_twitter", label = "Time of Day",
                                                                   choices = c(
                                                                     "01:00-04:59" = "01:00-04:59",
@@ -38,7 +42,8 @@ sidebar <- dashboardSidebar(collapsed = FALSE,
                                                                   selected = c("01:00-04:59", "05:00-09:59",
                                                                                "10:00-13:59", "14:00-17:59",
                                                                                "18:00-21:59", "22:00-00:59")
-                                                                  )),
+                                                                  ),
+                                               uiOutput("timeSinceLastUpdate")),
                               conditionalPanel("input.tabs == 'matatu'",
                                                checkboxGroupInput("years_matatu", label = "Year",
                                                                   choices = c(
@@ -101,7 +106,7 @@ ui <- dashboardPage(
     )
 
 # Define server logic
-server <- function(input, output) {
+server <- function(input, output, session) {
   
   binded_data <- readRDS("data/binded_data.rds")
   
@@ -111,9 +116,54 @@ server <- function(input, output) {
     filePath = 'data/twitter_data.rds',
     readFunc = readRDS
   )
-
+  
   observe({
-    print(input$tabs)
+    x <- input$today_twitter
+    
+    if (x) {
+      updateCheckboxGroupInput(
+        session = session,
+        inputId = "years_twitter",
+        label = "Year",
+        choices = c(
+          "2013" = 2013,
+          "2014" = 2015,
+          "2015" = 2015,
+          "2016" = 2016,
+          "2017" = 2017,
+          "2018" = 2018),
+        selected = year(Sys.Date()))
+    }
+    
+  })
+  
+  lastUpdateTime <- reactive({
+    twitter_data() # triggers when twitter data is updated
+    Sys.time()
+  })
+  
+  # Number of seconds since last update
+  output$timeSinceLastUpdate <- renderUI({
+    invalidateLater(1000, session) # update every one second
+    p(
+      id = "sidebar-p",
+      "Data refreshed ",
+      round(difftime(Sys.time(), lastUpdateTime(), units="secs")),
+      ifelse(round(difftime(Sys.time(), lastUpdateTime(), units="secs")) == 1, " second ago.", " seconds ago.")
+    )
+  })
+  
+  output$nairobiTime <- renderUI({
+    # Trigger if today_twitter input is selected
+    if(input$today_twitter) {
+      # Trigger this every 5 seconds
+      invalidateLater(5000, session)
+      p(
+        id = "sidebar-p",
+        "Nairobi: ",
+        format(with_tz(Sys.time(), tzone = "Africa/Nairobi"), format='%H:%M %d-%m-%Y')
+      )
+    }
   })
    
   output$map_twitter <- renderLeaflet({
@@ -148,6 +198,13 @@ server <- function(input, output) {
       filtered_data <- twitter_data() %>%
         filter(time_day %in% input$hours_twitter) %>%
         filter(year %in% input$years_twitter)
+      
+      if(input$today_twitter) {
+        filtered_data <- filtered_data %>%
+          filter(floor_date(date, unit = "days") == floor_date(with_tz(Sys.time(), 
+                                                                       tzone = "Africa/Nairobi"),
+                                                               unit = "days"))
+      }
       
       leafletProxy("map_twitter") %>% 
         clearGroup("markers") %>%
