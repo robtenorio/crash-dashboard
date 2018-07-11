@@ -139,12 +139,30 @@ tweets <- purrr::map(tweets_json, parse_tweet_text) %>% bind_rows %>%
   filter(!is.na(text)) %>%
   filter(!retweet_status %in% status_id) %>%
   filter(!duplicated(status_id, incomparables = NA)) %>%
-  filter(!duplicated(retweet_status, incomparables = NA)) %>%
-  mutate(date = floor_date(created_at, unit = "days")) %>%
-  group_by(date) %>%
-  mutate(id = row_number()) %>%
-  ungroup
+  filter(!duplicated(retweet_status, incomparables = NA))
+
+if(!"day_id" %in% names(tweets)) {
+  tweets <- tweets %>%
+    mutate(date = floor_date(created_at, unit = "days")) %>%
+    group_by(date) %>%
+    mutate(id = row_number()) %>%
+    ungroup
+}
+
+noId_date <- unique(tweets$date[is.na(tweets$day_id)])
   
+if(length(noId_date) != 0) {
+  tweets_noId <- tweets %>%
+    filter(date == noId_date) %>%
+    mutate(day_id = row_number())
+  
+  tweets <- tweets %>%
+    filter(!date == noId_date) %>%
+    bind_rows(tweets_noId)
+}
+
+tweets <- tweets %>%
+  select(-date)
 
 ### Set up clusters for parallel processing
 cl <- makeCluster(detectCores()-1)
@@ -172,7 +190,7 @@ if(file.exists(str_c(directory, "tweet-processing/supporting_files/results.rds",
       new_results <- parLapply(cl, tweet_split, predict_accident) %>% bind_rows
       results <- rbind(results, new_results)
       
-      #saveRDS(results, str_c(directory, "tweet-processing/supporting_files/results.rds", sep = "/"))
+      saveRDS(results, str_c(directory, "tweet-processing/supporting_files/results.rds", sep = "/"))
       stopCluster(cl)
     }
     
@@ -192,7 +210,7 @@ if(!file.exists(str_c(directory, "tweet-processing/supporting_files/results.rds"
     
     results <- parLapply(cl, tweet_split, predict_accident) %>% bind_rows
     
-    #saveRDS(results, str_c(directory, "tweet-processing/supporting_files/results.rds", sep = "/"))
+    saveRDS(results, str_c(directory, "tweet-processing/supporting_files/results.rds", sep = "/"))
     
     stopCluster(cl)
   }

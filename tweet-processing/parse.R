@@ -9,6 +9,11 @@ library(tidytext)
 
 #### supporting data
 directory <- "/home/ubuntu/Documents/crash-dashboard"
+
+if (Sys.info()[["user"]] == "roberttenorio") {
+  directory <- "crash-dashboard"
+}
+
 word_index <- readRDS(str_c(directory, "tweet-processing/supporting_files/word_index.rds", sep = "/"))
 
 all_tweets_file <- str_c(directory, "tweet-processing/supporting_files/all-tweets.json", sep = "/")
@@ -135,6 +140,29 @@ tweets <- purrr::map(tweets_json, parse_tweet_text) %>% bind_rows %>%
   filter(!retweet_status %in% status_id) %>%
   filter(!duplicated(status_id, incomparables = NA)) %>%
   filter(!duplicated(retweet_status, incomparables = NA))
+
+if(!"day_id" %in% names(tweets)) {
+  tweets <- tweets %>%
+    mutate(date = floor_date(created_at, unit = "days")) %>%
+    group_by(date) %>%
+    mutate(id = row_number()) %>%
+    ungroup
+}
+
+noId_date <- unique(tweets$date[is.na(tweets$day_id)])
+  
+if(length(noId_date) != 0) {
+  tweets_noId <- tweets %>%
+    filter(date == noId_date) %>%
+    mutate(day_id = row_number())
+  
+  tweets <- tweets %>%
+    filter(!date == noId_date) %>%
+    bind_rows(tweets_noId)
+}
+
+tweets <- tweets %>%
+  select(-date)
 
 ### Set up clusters for parallel processing
 cl <- makeCluster(detectCores()-1)
