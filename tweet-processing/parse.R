@@ -1,4 +1,5 @@
 library(jsonlite)
+library(lubridate)
 library(parallel)
 library(rtweet)
 library(tidyverse)
@@ -56,7 +57,7 @@ predict_accident <- function(m) {
   prediction <- predict_savedmodel(tweet_vectorized, str_c(directory, 'tweet-processing/supporting_files/classify_lower_25_300_92', sep = "/"))
   probability <- prediction$predictions[[1]]$dense_64
   
-  tibble(text = m[[1]], prob = round(probability*100, 0), date = m[[2]], status_id = m[[3]], geocoded = 0)
+  tibble(text = m[[1]], prob = round(probability*100, 0), date = m[[2]], status_id = m[[3]], geocoded = 0, day_id = m[[5]])
 }
 
 # load streamed tweets
